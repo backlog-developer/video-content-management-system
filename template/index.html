@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Uploader</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+</head>
+<body>
+    <h2>Upload a Video</h2>
+    <input type="file" id="videoFile" accept="video/*">
+    <button onclick="startUpload()">Upload</button>
+    <button onclick="cancelUpload()">Cancel</button>
+    <br>
+    <progress id="uploadProgress" value="0" max="100"></progress>
+    <span id="progressText">0%</span>
+    <p id="speedText">Speed: 0 KB/s</p>
+    
+    <script>
+        let uploadController;
+        function startUpload() {
+            const fileInput = document.getElementById('videoFile');
+            if (!fileInput.files.length) {
+                alert("Please select a file");
+                return;
+            }
+            uploadController = new AbortController();
+            const file = fileInput.files[0];
+            uploadFile(file);
+        }
+        function cancelUpload() {
+            if (uploadController) {
+                uploadController.abort();
+                alert("Upload Cancelled");
+            }
+        }
+        async function uploadFile(file) {
+            const chunkSize = 2 * 1024 * 1024; 
+            const totalChunks = Math.ceil(file.size / chunkSize);
+            let uploadedSize = 0;
+            let startTime = Date.now();
+            for (let i = 0; i < totalChunks; i++) {
+                const chunk = file.slice(i * chunkSize, (i + 1) * chunkSize);
+                const formData = new FormData();
+                formData.append("chunk", chunk);
+                const response = await fetch(`/upload?file_id=${file.name}&chunk_index=${i}&total_chunks=${totalChunks}`, {
+                    method: "POST",
+                    body: formData,
+                    signal: uploadController.signal
+                });
+                if (!response.ok) {
+                    alert("Upload failed");
+                    return;
+                }
+                uploadedSize += chunk.size;
+                let elapsedTime = (Date.now() - startTime) / 1000;
+                let speed = (uploadedSize / elapsedTime / 1024).toFixed(2);
+                document.getElementById("uploadProgress").value = ((i + 1) / totalChunks) * 100;
+                document.getElementById("progressText").innerText = `${Math.round(((i + 1) / totalChunks) * 100)}%`;
+                document.getElementById("speedText").innerText = `Speed: ${speed} KB/s`;
+            }
+            alert("Upload complete");
+        }
+    </script>
+</body>
+</html>

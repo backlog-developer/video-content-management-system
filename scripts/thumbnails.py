@@ -1,23 +1,15 @@
 import os
 import subprocess
 
-def transcode_video(input_path):
-    """Transcodes video to multiple resolutions and formats."""
-    resolutions = {"1080p": "1920x1080", "720p": "1280x720", "480p": "854x480"}
-    formats = ["mp4", "webm", "mkv"]
-    output_files = []
+def generate_thumbnail(video_path, filename):
+    base_name = os.path.splitext(filename)[0]
+    output_dir = "static/thumbnails"
+    os.makedirs(output_dir, exist_ok=True)
     
-    base_name = os.path.splitext(os.path.basename(input_path))[0]
-    output_dir = os.path.dirname(input_path)
+    thumbnail_path = f"{output_dir}/{base_name}.jpg"
+    command = [
+        "ffmpeg", "-i", video_path, "-ss", "00:00:05", "-vframes", "1", thumbnail_path
+    ]
+    subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
-    for res, size in resolutions.items():
-        for fmt in formats:
-            output_file = os.path.join(output_dir, f"{base_name}_{res}.{fmt}")
-            command = [
-                "ffmpeg", "-i", input_path, "-vf", f"scale={size}",
-                "-c:v", "libx264", "-preset", "fast", "-crf", "23", output_file
-            ]
-            subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            output_files.append(output_file)
-    
-    return output_files
+    return thumbnail_path
